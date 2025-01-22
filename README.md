@@ -6,5 +6,5 @@ uses clang++17
 
 to execute in command line:
 
-1.) make
-2.) ./shell 
+1. make
+2. ./shell 
