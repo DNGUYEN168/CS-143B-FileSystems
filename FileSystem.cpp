@@ -20,11 +20,24 @@ void printFileDescriptor(const unsigned char* buffer) {
 void checkContents(unsigned char* M, int size) {
     // Loop through every 16 bytes in M and treat it as a file descriptor
     for (int i = 0; i < size; i += 16) {
-        std::cout << "FD at offset " << i << ": ";
+        std::cout << "FD at offset " << i/16 << ": ";
         printFileDescriptor(&M[i]);
     }
 }
 
+void print_bits(unsigned char M[512]) {
+    // Loop through the first 64 bits (8 bytes)
+    for (int i = 0; i < 8; i++) {
+        unsigned char byte = M[i];
+        
+        // Loop through each bit in the byte (8 bits)
+        for (int j = 0; j < 8; j++) {
+            // Extract and print the bit (1 or 0), printing from LSB to MSB
+            printf("%d", (byte >> j) & 1);
+        }
+    }
+    printf("\n");
+}
 
 FileSystem::FileSystem()
 {
@@ -64,15 +77,14 @@ void FileSystem::init()
     // D[0] = bitmap
     // D[7] = directory 
 
-    M[0] = 0xFF; // sets the first 8 bits to be 1 
-
-    // 
+    // bit map uses at most Disk[0][0-7] (64 bits = 8 bytes) 
+    M[0] = 0xFF; // sets the first 8 bits to be 1 ( those blocks are used)     
+    
     virtualDisk->write_block(0, M); // wrtie to our bitmap the new bitmap 
 
-
     // writing file descriptors into the disk 
-    // struct fd = 16 bytes
-    // store structs contigously 
+    // struct fd = 16 bytes (no padding) 
+    // store structs contiguously 
 
     fileDescriptors DirectoryFD = {0,7,-1,-1}; // only for directory
     fileDescriptors DefaultFD = {-1, -1,- 1, -1}; // normal fd
@@ -90,10 +102,6 @@ void FileSystem::init()
                 memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
             }
         }
-
-        std::cout<< i << std::endl;
-        checkContents(M, 512);
-        exit(0);
         virtualDisk->write_block(i, M); // write to disk the new block of fd's
     }
 
