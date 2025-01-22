@@ -7,9 +7,9 @@
 typedef struct
 {
     int fileSize;
-    int current_pos;
-    int file_size;
-    int descriptor_index;
+    int b1;
+    int b2;
+    int b3;
 } fileDescriptors;
 
 

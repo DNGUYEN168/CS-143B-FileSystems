@@ -2,6 +2,30 @@
 #include <cstring>
 #include <iostream>
 
+// TEMP HElpesr 
+void printFileDescriptor(const unsigned char* buffer) {
+    // Create a fileDescriptors struct to hold the extracted data
+    fileDescriptors fd;
+    
+    // Copy the 16 bytes from the buffer into the fileDescriptors struct
+    std::memcpy(&fd, buffer, sizeof(fileDescriptors));
+
+    // Print the fields of the file descriptor
+    std::cout << "Field 1: " << fd.fileSize << ", ";
+    std::cout << "Field 2: " << fd.b1 << ", ";
+    std::cout << "Field 3: " << fd.b2 << ", ";
+    std::cout << "Field 4: " << fd.b3 << std::endl;
+}
+
+void checkContents(unsigned char* M, int size) {
+    // Loop through every 16 bytes in M and treat it as a file descriptor
+    for (int i = 0; i < size; i += 16) {
+        std::cout << "FD at offset " << i << ": ";
+        printFileDescriptor(&M[i]);
+    }
+}
+
+
 FileSystem::FileSystem()
 {
     // initailze all required data, and possibly sort disk here in the constructor 
@@ -46,5 +70,35 @@ void FileSystem::init()
     virtualDisk->write_block(0, M); // wrtie to our bitmap the new bitmap 
 
 
+    // writing file descriptors into the disk 
+    // struct fd = 16 bytes
+    // store structs contigously 
+
+    fileDescriptors DirectoryFD = {0,7,-1,-1}; // only for directory
+    fileDescriptors DefaultFD = {-1, -1,- 1, -1}; // normal fd
+
+    for (int i = 1; i < 7; i++) // blocks 1-7
+    {
+        for (int j=0; j < 512; j += 16) // array 0-512 (16 byte fds)
+        {
+            if (i == 1 && j == 0) // very first fileDescriptor
+            {
+                memcpy(&M[j], &DirectoryFD, sizeof(DirectoryFD)); // copy directory into first fd 
+            }
+            else
+            {
+                memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
+            }
+        }
+
+        std::cout<< i << std::endl;
+        checkContents(M, 512);
+        exit(0);
+        virtualDisk->write_block(i, M); // write to disk the new block of fd's
+    }
+
+
+    
+    
 
 }
