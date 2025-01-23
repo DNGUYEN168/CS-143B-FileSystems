@@ -10,10 +10,10 @@ void printFileDescriptor(const unsigned char* buffer) {
     std::memcpy(&fd, buffer, sizeof(fileDescriptors));
 
     // Print the fields of the file descriptor
-    std::cout << "Field 1: " << fd.fileSize << ", ";
-    std::cout << "Field 2: " << fd.b1 << ", ";
-    std::cout << "Field 3: " << fd.b2 << ", ";
-    std::cout << "Field 4: " << fd.b3 << std::endl;
+    std::cout << "{" << fd.fileSize << ", ";
+    std::cout <<  fd.b1 << ", ";
+    std::cout <<  fd.b2 << ", ";
+    std::cout <<  fd.b3 << "}" << std::endl;
 }
 
 void checkContents(unsigned char* M, int size) {

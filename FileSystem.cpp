@@ -3,7 +3,6 @@
 #include <cstring>
 #include <iostream>
 
-
 FileSystem::FileSystem()
 {
     // initailze all required data, and possibly sort disk here in the constructor 
@@ -22,6 +21,9 @@ FileSystem::FileSystem()
     }
 
     init(); // call to init to start, will be called mutliple in shell 
+
+
+
 }
 
 void FileSystem::init()
@@ -41,7 +43,7 @@ void FileSystem::init()
 
     // bit map uses at most Disk[0][0-7] (64 bits = 8 bytes) 
     M[0] = 0xFF; // sets the first 8 bits to be 1 ( those blocks are used)     
-    print_bits(M);
+    
     virtualDisk->write_block(0, M); // wrtie to our bitmap the new bitmap 
 
     // writing file descriptors into the disk 
@@ -64,8 +66,14 @@ void FileSystem::init()
                 memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
             }
         }
+        std::cout << "BLOCK" << i  << '\n' << std::endl;
+        checkContents(M, 512);
+        // exit(0);
         virtualDisk->write_block(i, M); // write to disk the new block of fd's
     }
+
+    // initilize the OFT 
+
 
 
     
