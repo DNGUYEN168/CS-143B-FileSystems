@@ -6,7 +6,7 @@ CXXFLAGS = -Wall -std=c++17
 TARGET = shell
 
 # Source files
-SRCS = main.cpp FileSystem.cpp Disk.cpp
+SRCS = main.cpp FileSystem.cpp Disk.cpp Helpers.cpp
 
 # Build target
 $(TARGET): $(SRCS)
