@@ -4,6 +4,9 @@
 #include <iostream>
 
 
+       // std::cout << "BLOCK NUM " << i << std::endl;
+        // checkContents(M, (i-1)*32);
+
 void printFileDescriptor(const unsigned char* buffer) {
     // Create a fileDescriptors struct to hold the extracted data
     fileDescriptors fd;
@@ -39,3 +42,4 @@ void print_bits(unsigned char M[512]) {
     }
     printf("\n");
 }
+

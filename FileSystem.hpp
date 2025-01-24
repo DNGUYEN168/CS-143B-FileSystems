@@ -45,7 +45,7 @@ class FileSystem
     void destroy();
     void open();
     void close();
-    void read();
+    int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
     void write();
     int seek(int i, int p);
     void directory();
@@ -55,6 +55,8 @@ class FileSystem
     // auxiliory function 
     void init();
 
+    // helpers 
+    fileDescriptors getFileDescriptor(int i);
 };
 
 

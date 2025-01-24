@@ -55,14 +55,17 @@ void FileSystem::init()
             {
                 memcpy(&M[j], &DirectoryFD, sizeof(DirectoryFD)); // copy directory into first fd 
             }
+            if (i == 3 && j == 272) // test run use numbers 3 and 272
+            {   
+                fileDescriptors test = {12, -10,- 13, -10}; // normal fd
+                memcpy(&M[j], &test, sizeof(test));
+            }
             else
             {
                 memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
             }
         }
-        std::cout << "BLOCK NUM " << i << std::endl;
-        checkContents(M, (i-1)*32);
-
+ 
         virtualDisk->write_block(i, M); // write to disk the new block of fd's
     }
     // initilize the OFT 
@@ -90,14 +93,80 @@ void FileSystem::init()
     std::memset(M, 0, sizeof(M));
 }
 
-// The directory has an initial size of 0 and expands in fixed increments of 
-// 8 bytes since each new entry consists of 4 characters followed by an integer
-void FileSystem::create(unsigned char *name)
+fileDescriptors FileSystem::getFileDescriptor(int i)
 {
+    // get fd info if we need to get more blocks later on 
+    // int fdBlockIndex = (OFT[i].descriptor_index / 32) + 1; 
+    // int fdIndex = (OFT[i].descriptor_index % 32) * 16; // starting point of fd at OFT[i] 
+    int fdBlockIndex = 3;
+    int fdIndex = 272;
+    unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
 
+    fileDescriptors fdData; 
+    // copy file descriptors for ease of use later 
+    memcpy(&fdData.fileSize, &cacheFDBlock[fdIndex], 4); 
+    memcpy(&fdData.b1, &cacheFDBlock[fdIndex+4], 4);         
+    memcpy(&fdData.b2, &cacheFDBlock[fdIndex +8], 4);         
+    memcpy(&fdData.b3, &cacheFDBlock[fdIndex + 12], 4); 
+
+    return fdData;
 
 }
 
+// The directory has an initial size of 0 and expands in fixed increments of 
+// 8 bytes since each new entry consists of 4 characters followed by an integer
+
+
+int FileSystem::read(int i, int m, int n)
+{
+    if (i < 0 || i > 3) // not inside OFT range
+    {
+        throw "Error: Invalid OFT index";
+    }
+    if (OFT[i].file_size == -1)
+    {
+        throw "Error: File not opened" ;
+    }
+    if (n < 0 || n >= 512) // n = 0 - 511 
+    {
+        throw "Error: Invalid byte size";
+    }
+    if (m < 0 || m >= 512) {
+        throw "Error: Invalid memory index";
+    }
+
+    int bufferPosition = OFT[i].current_position % 512;
+    // assume 0 - 1535, the buffer inside OFT[i] will be some block, we mod to get the starting point at THAT block     
+
+    fileDescriptors fdData = getFileDescriptor(i); // get file descriptor and store for ease of use 
+
+    for (n; n > 0; n--, m++, OFT[i].current_position++) // decr n (num bytes), inc m (memory position) , inc oft.curr
+    {
+        if (m > 512) {break;} // not enough room in main memory 
+        if (OFT[i].current_position > OFT[i].file_size) {break;} // file has no more data 
+        if (OFT[i].current_position == 512) // b1 (0-511) move to b2 if curr_pos goes past 
+        {
+             //move block 1 back to disk
+            virtualDisk->write_block(fdData.b1, OFT[i].buffer);
+
+            // get block 2 for more reading 
+            virtualDisk->read_block(fdData.b2, OFT[i].buffer);
+        }
+        else if (OFT[i].current_position == 1024) // blocks 2 (512 - 1023) move to block 3 if curr_pos goes past b2
+        {
+            //move block 2 back to disk
+            virtualDisk->write_block(fdData.b2, OFT[i].buffer);
+
+            // get block3 for more reading 
+            virtualDisk->read_block(fdData.b3, OFT[i].buffer);
+        }
+        M[m] = OFT[i].buffer[bufferPosition]; // copy data
+        bufferPosition = OFT[i].current_position % 512; // make sure it stays wiwhtin 0 - 511
+    }
+
+    return n;
+    
+}
 
 int FileSystem::seek(int i, int p)
 {
@@ -126,9 +195,14 @@ int FileSystem::seek(int i, int p)
     }
     else // we need to retrieve the new block and switch it with the old block  
     {
-        int currBlock = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
+        int fdBlockIndex = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
         int fdIndex = (OFT[i].descriptor_index % 32) * 16; // mod 32 to get the index of fd, multiply 16 to get to the correct starting place in array 
-        
+         
+        // location of OFT[i] file descriptor within the D[1-6] 
+        // retrieving file data 
+        unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
+
+
     }
 
     return p;
