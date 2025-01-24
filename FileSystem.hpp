@@ -13,13 +13,21 @@ typedef struct
 } fileDescriptors;
 
 
-
+typedef struct 
+{
+    unsigned char buffer[512]; 
+    int current_position; // current position inside file 
+    int file_size; // size of currently opened file 
+    int descriptor_index; // where its index is inside disk 
+} oft_entry;
 
 class FileSystem
 {
 
     private:
     Disk* virtualDisk; // disk that will hold all file information 
+
+    oft_entry OFT[4]; // open file table 
 
     unsigned char* I[512]; // input_buffer
     unsigned char* O[512]; // output_buffer
@@ -39,7 +47,7 @@ class FileSystem
     void close();
     void read();
     void write();
-    void seek();
+    int seek(int i, int p);
     void directory();
 
     void quit(); // end program

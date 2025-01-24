@@ -10,7 +10,6 @@ FileSystem::FileSystem()
 
     localChache = new unsigned char* [6]; // 6 fd arrays
 
-
     for (int x =0; x < 6; x++) // initialize an empty cache 
     {
         localChache[x] = new unsigned char [512]; 
@@ -19,11 +18,7 @@ FileSystem::FileSystem()
             localChache[x][y] = '\0';
         }
     }
-
     init(); // call to init to start, will be called mutliple in shell 
-
-
-
 }
 
 void FileSystem::init()
@@ -66,17 +61,67 @@ void FileSystem::init()
                 memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
             }
         }
-        std::cout << "BLOCK" << i  << '\n' << std::endl;
-        checkContents(M, 512);
-        // exit(0);
         virtualDisk->write_block(i, M); // write to disk the new block of fd's
     }
 
     // initilize the OFT 
+    for (int i = 0; i < 4; i++)
+    {
+
+        std::memset(OFT[i].buffer, 0, sizeof(OFT[i].buffer)); // OFT buffer = '\0'
+
+        // the rest are -1 
+        OFT[i].current_position = -1;
+        OFT[i].descriptor_index = -1;
+        OFT[i].file_size = -1;
+    }
+
+    // OFT[0] is all 0 and holds directory information 
+    OFT[0].current_position = 0;
+    OFT[0].descriptor_index = 0;
+    OFT[0].file_size = 0;
+    virtualDisk->read_block(7, OFT[0].buffer);
+
+    for (int i = 0; i < 7; i++) // store 0-6 for quick access 
+    {
+        virtualDisk->read_block(i, localChache[i]);
+    }
+
+    //Clear M once again (was holding fd info) 
+    std::memset(M, 0, sizeof(M));
+}
+
+// The directory has an initial size of 0 and expands in fixed increments of 
+// 8 bytes since each new entry consists of 4 characters followed by an integer
+
+int FileSystem::seek(int i, int p)
+{
+    // i = index at OFT
+    // p = new pos we want to move at 
+    if (i < 0 || i > 3) // not in range of OFT
+    {
+        throw "Error: Invalid OFT index";
+    }
+    if (OFT[i].file_size == -1)
+    {
+        throw "Error: File at index not opened";
+    }
+    if (p < 0 || p > OFT[i].file_size) // desired position is negative, or bigger than current file 
+    {
+        throw  "error: current position is past the end of file";
+    }
+
+    // main seek 
+    // pos > 0
+    // p and current_pos are in the same block (i.e. divided by 512 equals the same number) 
+    // we subtract 1 to avoid is curr_pos = 512 and p = 510, they are the same block but might lead to different numbers 
+    if ( OFT[i].current_position > 0 && (OFT[i].current_position -1 / 512 == p / 512) || (OFT[i].current_position / 512 == p / 512))
+    {
+        OFT[i].current_position = p; 
+    }
 
 
 
-    
-    
+
 
 }
