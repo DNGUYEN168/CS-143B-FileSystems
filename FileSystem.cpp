@@ -8,9 +8,9 @@ FileSystem::FileSystem()
     // initailze all required data, and possibly sort disk here in the constructor 
     virtualDisk = new Disk();
 
-    localChache = new unsigned char* [6]; // 6 fd arrays
+    localChache = new unsigned char* [7]; // 1 bitmap block + 6 fd array blocks
 
-    for (int x =0; x < 6; x++) // initialize an empty cache 
+    for (int x =0; x < 7; x++) // initialize an empty cache 
     {
         localChache[x] = new unsigned char [512]; 
         std::memset(localChache[x], 0, sizeof(localChache[x]));
@@ -79,7 +79,7 @@ void FileSystem::init()
     OFT[0].file_size = 0;
     virtualDisk->read_block(7, OFT[0].buffer); // store directory inside OFT[0]
 
-    for (int i = 0; i < 6; i++) // store 0-6 for quick access 
+    for (int i = 0; i < 7; i++) // store 0-6 for quick access 
     {
         virtualDisk->read_block(i, localChache[i]);
     }
@@ -126,7 +126,7 @@ int FileSystem::seek(int i, int p)
     {
         int currBlock = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
     }
-    
+
     return p;
 
 
