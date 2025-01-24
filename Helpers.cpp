@@ -1,6 +1,8 @@
 #include "FileSystem.hpp"
+#include "Helpers.hpp"
 #include <cstring>
 #include <iostream>
+
 
 void printFileDescriptor(const unsigned char* buffer) {
     // Create a fileDescriptors struct to hold the extracted data
@@ -18,8 +20,8 @@ void printFileDescriptor(const unsigned char* buffer) {
 
 void checkContents(unsigned char* M, int size) {
     // Loop through every 16 bytes in M and treat it as a file descriptor
-    for (int i = 0; i < size; i += 16) {
-        std::cout << "FD at offset " << i/16 << ": ";
+    for (int i = 0; i < 512; i += 16) {
+        std::cout << "offset "<< i << " FD " << i/16 + size << ": ";
         printFileDescriptor(&M[i]);
     }
 }

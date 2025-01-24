@@ -60,17 +60,19 @@ void FileSystem::init()
                 memcpy(&M[j], &DefaultFD, sizeof(DefaultFD)); // copy default for the rest 
             }
         }
+        std::cout << "BLOCK NUM " << i << std::endl;
+        checkContents(M, (i-1)*32);
+
         virtualDisk->write_block(i, M); // write to disk the new block of fd's
     }
-
     // initilize the OFT 
     for (int i = 0; i < 4; i++)
     {
         std::memset(OFT[i].buffer, 0, sizeof(OFT[i].buffer)); // OFT buffer = '\0'
         // the rest are -1 
-        OFT[i].current_position = -1;
-        OFT[i].descriptor_index = -1;
-        OFT[i].file_size = -1;
+        OFT[i].current_position = 0;
+        OFT[i].descriptor_index = 81;
+        OFT[i].file_size = 600;
     }
 
     // OFT[0] is all 0 and holds directory information 
@@ -125,6 +127,8 @@ int FileSystem::seek(int i, int p)
     else // we need to retrieve the new block and switch it with the old block  
     {
         int currBlock = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
+        int fdIndex = (OFT[i].descriptor_index % 32) * 16; // mod 32 to get the index of fd, multiply 16 to get to the correct starting place in array 
+        
     }
 
     return p;
