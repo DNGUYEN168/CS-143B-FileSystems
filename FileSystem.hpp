@@ -41,7 +41,7 @@ class FileSystem
     public:
     FileSystem();
 
-    void create();
+    void create(unsigned char* name);
     void destroy();
     void open();
     void close();

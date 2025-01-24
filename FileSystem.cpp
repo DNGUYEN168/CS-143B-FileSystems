@@ -13,13 +13,12 @@ FileSystem::FileSystem()
     for (int x =0; x < 6; x++) // initialize an empty cache 
     {
         localChache[x] = new unsigned char [512]; 
-        for (int y = 0; y < 512; y++) // fill the rest with '\0'
-        {
-            localChache[x][y] = '\0';
-        }
+        std::memset(localChache[x], 0, sizeof(localChache[x]));
     }
     init(); // call to init to start, will be called mutliple in shell 
 }
+
+
 
 void FileSystem::init()
 {
@@ -67,9 +66,7 @@ void FileSystem::init()
     // initilize the OFT 
     for (int i = 0; i < 4; i++)
     {
-
         std::memset(OFT[i].buffer, 0, sizeof(OFT[i].buffer)); // OFT buffer = '\0'
-
         // the rest are -1 
         OFT[i].current_position = -1;
         OFT[i].descriptor_index = -1;
@@ -80,19 +77,25 @@ void FileSystem::init()
     OFT[0].current_position = 0;
     OFT[0].descriptor_index = 0;
     OFT[0].file_size = 0;
-    virtualDisk->read_block(7, OFT[0].buffer);
+    virtualDisk->read_block(7, OFT[0].buffer); // store directory inside OFT[0]
 
-    for (int i = 0; i < 7; i++) // store 0-6 for quick access 
+    for (int i = 0; i < 6; i++) // store 0-6 for quick access 
     {
         virtualDisk->read_block(i, localChache[i]);
     }
 
-    //Clear M once again (was holding fd info) 
+    // //Clear M once again (was holding fd info) 
     std::memset(M, 0, sizeof(M));
 }
 
 // The directory has an initial size of 0 and expands in fixed increments of 
 // 8 bytes since each new entry consists of 4 characters followed by an integer
+void FileSystem::create(unsigned char *name)
+{
+
+
+}
+
 
 int FileSystem::seek(int i, int p)
 {
@@ -119,7 +122,12 @@ int FileSystem::seek(int i, int p)
     {
         OFT[i].current_position = p; 
     }
-
+    else // we need to retrieve the new block and switch it with the old block  
+    {
+        int currBlock = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
+    }
+    
+    return p;
 
 
 

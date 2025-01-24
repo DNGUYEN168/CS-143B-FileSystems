@@ -6,6 +6,6 @@ int main()
 {
     // Disk* teast= new Disk();
     FileSystem FS = FileSystem();
-    std::cout << "die i hate you\n" << std::endl; 
+    std::cout << 3/32 << std::endl; 
     return 0;
 }
