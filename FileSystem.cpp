@@ -37,15 +37,13 @@ void FileSystem::init()
     // D[7] = directory 
 
     // TEST SECTION 
-    unsigned char test[4] = {'W', 'X', 'Y', '\0'};
-    int fdIndex = 61;
-    memcpy(&M[0], &test, sizeof(test));
-    memcpy(&M[4], &fdIndex, sizeof(fdIndex));
-    virtualDisk->write_block(7, M); // write to direcoty 
-    std::memset(M, 0, sizeof(M));
 
-
-    
+    // unsigned char test[4] = {'W', 'X', 'Y', '\0'};
+    // int fdIndex = 61;
+    // memcpy(&M[0], &test, sizeof(test));
+    // memcpy(&M[4], &fdIndex, sizeof(fdIndex));
+    // virtualDisk->write_block(7, M); // write to direcoty 
+    // std::memset(M, 0, sizeof(M));
 
     // END OF TEST SECTION 
 
@@ -127,8 +125,12 @@ void FileSystem::create(unsigned char *name)
     seek(0,0);
     // read to main memory starting at curr_pos 0 in directory 
     read(0, 0, 8); // read the first 8 bytes from diretory onto main memory 
+    // std::cout << OFT[0].buffer[0] << std::endl;
+    // std::cout << OFT[0].buffer[1] << std::endl;
+    // std::cout << OFT[0].buffer[2] << std::endl;
+    // std::cout << OFT[0].buffer[3] << std::endl;
 
-    virtualDisk->read_block(7,M);
+    
     unsigned char test[4];
     int fdIndex;
     memcpy(&test, &M[0], 4);
@@ -163,8 +165,10 @@ int FileSystem::read(int i, int m, int n)
     
     for (n; n > 0; n--, m++, OFT[i].current_position++) // decr n (num bytes), inc m (memory position) , inc oft.curr
     {
+        bufferPosition = OFT[i].current_position % 512; // make sure it stays wiwhtin 0 - 511
         if (m > 512) {break;} // not enough room in main memory 
         if (OFT[i].current_position > OFT[i].file_size && i != 0) {break;} // file has no more data (excluding dir)
+        
         if (OFT[i].current_position == 512) // b1 (0-511) move to b2 if curr_pos goes past 
         {
              //move block 1 back to disk
@@ -183,7 +187,7 @@ int FileSystem::read(int i, int m, int n)
         }
         
         M[m] = OFT[i].buffer[bufferPosition]; // copy data
-        bufferPosition = OFT[i].current_position % 512; // make sure it stays wiwhtin 0 - 511
+        
     }
   
     return n;
@@ -216,13 +220,7 @@ int FileSystem::seek(int i, int p)
     }
     else // we need to retrieve the new block and switch it with the old block  
     {
-        int fdBlockIndex = (OFT[i].descriptor_index / 32) + 1; // fd 0-191 / 32 = 0 - 5 add 1 to get it 1 - 6
-        int fdIndex = (OFT[i].descriptor_index % 32) * 16; // mod 32 to get the index of fd, multiply 16 to get to the correct starting place in array 
-         
-        // location of OFT[i] file descriptor within the D[1-6] 
-        // retrieving file data 
-        unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
-
+        fileDescriptors fdData = getFileDescriptor(i); // get file data; 
 
     }
 
