@@ -6,7 +6,8 @@ int main()
 {
     // Disk* teast= new Disk();
     FileSystem FS = FileSystem();
-    FS.read(0,100,50);
+    unsigned char test[4] = {'W', 'X', 'Y', '\0'};
+    FS.create(test);
 
     return 0;
 }
