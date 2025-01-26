@@ -38,12 +38,12 @@ void FileSystem::init()
 
     // TEST SECTION 
 
-    // unsigned char test[4] = {'W', 'X', 'Y', '\0'};
-    // int fdIndex = 61;
-    // memcpy(&M[0], &test, sizeof(test));
-    // memcpy(&M[4], &fdIndex, sizeof(fdIndex));
-    // virtualDisk->write_block(7, M); // write to direcoty 
-    // std::memset(M, 0, sizeof(M));
+    unsigned char test[4] = {'W', 'X', 'Y', '\0'};
+    int fdIndex = 61;
+    memcpy(&M[0], &test, sizeof(test));
+    memcpy(&M[4], &fdIndex, sizeof(fdIndex));
+    virtualDisk->write_block(7, M); // write to direcoty 
+    std::memset(M, 0, sizeof(M));
 
     // END OF TEST SECTION 
 
@@ -124,20 +124,13 @@ void FileSystem::create(unsigned char *name)
 {
     seek(0,0);
     // read to main memory starting at curr_pos 0 in directory 
-    read(0, 0, 8); // read the first 8 bytes from diretory onto main memory 
-    // std::cout << OFT[0].buffer[0] << std::endl;
-    // std::cout << OFT[0].buffer[1] << std::endl;
-    // std::cout << OFT[0].buffer[2] << std::endl;
-    // std::cout << OFT[0].buffer[3] << std::endl;
+    while (OFT[0].current_position < OFT[0].file_size)
+    {
+        read(0,0,8); // read 8 bytes 
 
-    
-    unsigned char test[4];
-    int fdIndex;
-    memcpy(&test, &M[0], 4);
-    memcpy(&fdIndex, &M[4], 4);
 
-    std::cout << test << " " <<fdIndex <<  std::endl;
-    std::memset(M, 0, sizeof(M));
+        
+    }
     
 }
 
@@ -159,15 +152,15 @@ int FileSystem::read(int i, int m, int n)
         throw "Error: Invalid memory index";
     }
 
-    int bufferPosition = OFT[i].current_position % 512;
+    int bufferPosition;
     // assume 0 - 1535, the buffer inside OFT[i] will be some block, we mod to get the starting point at THAT block     
     fileDescriptors fdData = getFileDescriptor(i); // get file descriptor and store for ease of use 
     
     for (n; n > 0; n--, m++, OFT[i].current_position++) // decr n (num bytes), inc m (memory position) , inc oft.curr
     {
         bufferPosition = OFT[i].current_position % 512; // make sure it stays wiwhtin 0 - 511
-        if (m > 512) {break;} // not enough room in main memory 
-        if (OFT[i].current_position > OFT[i].file_size && i != 0) {break;} // file has no more data (excluding dir)
+        if (m >= 512) {break;} // not enough room in main memory 
+        if (OFT[i].current_position > OFT[i].file_size) {break;} // file has no more data (excluding dir)
         
         if (OFT[i].current_position == 512) // b1 (0-511) move to b2 if curr_pos goes past 
         {
@@ -222,11 +215,22 @@ int FileSystem::seek(int i, int p)
     {
         fileDescriptors fdData = getFileDescriptor(i); // get file data; 
 
+        int currBlock;
+        if (OFT[i].current_position < 512) { currBlock = fdData.b1;} // pos < 512 we are in block1 (0 - 511)
+        else if (OFT[i].current_position < 1024) { currBlock = fdData.b2;} // 512 - 1023
+        else {currBlock = fdData.b3;} // 1024 - 1535
+
+        int new_block;
+        if (p < 512) { new_block = fdData.b1;} // in b1
+        else if (p < 1024) { new_block = fdData.b2;}  //b2
+        else {new_block = fdData.b3;} //b3
+
+        // return old block
+        virtualDisk->write_block(currBlock, OFT[i].buffer);
+        // get new block
+        virtualDisk->read_block(new_block, OFT[i].buffer);
+        // update position 
+        OFT[i].current_position = p;
     }
-
     return p;
-
-
-
-
 }
