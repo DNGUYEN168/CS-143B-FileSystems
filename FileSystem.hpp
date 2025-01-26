@@ -3,7 +3,7 @@
 #define FILESYSTEM_H
 
 #include "Disk.hpp"
-
+#include <string>
 typedef struct
 {
     int fileSize;
@@ -31,7 +31,6 @@ class FileSystem
 
     unsigned char* I[512]; // input_buffer
     unsigned char* O[512]; // output_buffer
-    unsigned char M[512]; // main memory ( can be used to help set up the fds)
 
 
     // using a psuedo cache to save fds later 
@@ -40,6 +39,8 @@ class FileSystem
 
     public:
     FileSystem();
+    unsigned char M[512]; // main memory ( can be used to help set up the fds)
+
 
     void create(unsigned char* name);
     void destroy();
@@ -54,9 +55,13 @@ class FileSystem
 
     // auxiliory function 
     void init();
+    int write_memory(int m, unsigned char* s);
+    std::string read_memory(int m, int n);
 
     // helpers 
     fileDescriptors getFileDescriptor(int i);
+    void UpdateFD(fileDescriptors fd, int fdNum); // given fdIndex update with new info
+
 };
 
 

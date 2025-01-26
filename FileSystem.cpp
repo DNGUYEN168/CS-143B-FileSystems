@@ -3,6 +3,38 @@
 #include <cstring>
 #include <iostream>
 
+
+fileDescriptors FileSystem::getFileDescriptor(int i)
+{
+    // get fd info if we need to get more blocks later on 
+    int fdBlockIndex = (OFT[i].descriptor_index / 32) + 1; 
+    int fdIndex = (OFT[i].descriptor_index % 32) * 16; // starting point of fd at OFT[i] 
+    unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
+
+    fileDescriptors fdData; 
+    // copy file descriptors for ease of use later 
+    memcpy(&fdData.fileSize, &cacheFDBlock[fdIndex], 4); 
+    memcpy(&fdData.b1, &cacheFDBlock[fdIndex+4], 4);         
+    memcpy(&fdData.b2, &cacheFDBlock[fdIndex +8], 4);         
+    memcpy(&fdData.b3, &cacheFDBlock[fdIndex + 12], 4); 
+    return fdData;
+}
+
+void FileSystem::UpdateFD(fileDescriptors fd, int fdNum)
+{
+    // get fd info if we need to get more blocks later on 
+    int fdBlockIndex = (fdNum / 32) + 1; 
+    int fdIndex = (fdNum % 32) * 16; // starting point of fd at OFT[i] 
+    unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
+
+    // copy file descriptors for ease of use later 
+    memcpy(&cacheFDBlock[fdIndex], &fd.fileSize,  4); 
+    memcpy(&cacheFDBlock[fdIndex+4], &fd.b1,  4);         
+    memcpy(&cacheFDBlock[fdIndex +8], &fd.b2,  4);         
+    memcpy(&cacheFDBlock[fdIndex + 12], &fd.b3,  4); 
+
+}
+
 FileSystem::FileSystem()
 {
     // initailze all required data, and possibly sort disk here in the constructor 
@@ -38,12 +70,12 @@ void FileSystem::init()
 
     // TEST SECTION 
 
-    unsigned char test[4] = {'W', 'X', 'Y', '\0'};
-    int fdIndex = 61;
-    memcpy(&M[0], &test, sizeof(test));
-    memcpy(&M[4], &fdIndex, sizeof(fdIndex));
-    virtualDisk->write_block(7, M); // write to direcoty 
-    std::memset(M, 0, sizeof(M));
+    // unsigned char test[4] = {'W', 'X', 'Y', '\0'};
+    // int fdIndex = 61;
+    // memcpy(&M[0], &test, sizeof(test));
+    // memcpy(&M[4], &fdIndex, sizeof(fdIndex));
+    // virtualDisk->write_block(7, M); // write to direcoty 
+    // std::memset(M, 0, sizeof(M));
 
     // END OF TEST SECTION 
 
@@ -81,9 +113,9 @@ void FileSystem::init()
     {
         std::memset(OFT[i].buffer, 0, sizeof(OFT[i].buffer)); // OFT buffer = '\0'
         // the rest are -1 
-        OFT[i].current_position = 0;
-        OFT[i].descriptor_index = 81;
-        OFT[i].file_size = 600;
+        OFT[i].current_position = -1;
+        OFT[i].descriptor_index = -1;
+        OFT[i].file_size = -1;
     }
 
     // OFT[0] is all 0 and holds directory information 
@@ -101,21 +133,25 @@ void FileSystem::init()
     std::memset(M, 0, sizeof(M));
 }
 
-fileDescriptors FileSystem::getFileDescriptor(int i)
+int FileSystem::write_memory(int m, unsigned char *s)
 {
-    // get fd info if we need to get more blocks later on 
-    int fdBlockIndex = (OFT[i].descriptor_index / 32) + 1; 
-    int fdIndex = (OFT[i].descriptor_index % 32) * 16; // starting point of fd at OFT[i] 
-    unsigned char* cacheFDBlock = localChache[fdBlockIndex]; 
+    int S_len = strlen((char*)s) + m; // total legnth 
+    for (int i=m; i < S_len; i++)
+    {
+        M[i] = s[i];
+    }
+    return S_len;
+}
 
-    fileDescriptors fdData; 
-    // copy file descriptors for ease of use later 
-    memcpy(&fdData.fileSize, &cacheFDBlock[fdIndex], 4); 
-    memcpy(&fdData.b1, &cacheFDBlock[fdIndex+4], 4);         
-    memcpy(&fdData.b2, &cacheFDBlock[fdIndex +8], 4);         
-    memcpy(&fdData.b3, &cacheFDBlock[fdIndex + 12], 4); 
-    return fdData;
-
+std::string FileSystem::read_memory(int m, int n)
+{
+    std::string retVal(n, '\0');
+    for (int i=0; i< n; i++)
+    {
+        retVal[i] = M[m+i]; // copy info
+        if (M[i] == '\0') {break;}
+    }
+    return retVal;
 }
 
 // The directory has an initial size of 0 and expands in fixed increments of 
@@ -123,15 +159,64 @@ fileDescriptors FileSystem::getFileDescriptor(int i)
 void FileSystem::create(unsigned char *name)
 {
     seek(0,0);
+    unsigned char test[8] = {'\0', '\0','\0','\0','\0', '\0','\0','\0'};
     // read to main memory starting at curr_pos 0 in directory 
     while (OFT[0].current_position < OFT[0].file_size)
     {
-        read(0,0,8); // read 8 bytes 
-
-
+        read(0,0,8); // read 8 bytes --> move curr_pos + 8 
         
+        memcpy(&test, &M[0], 4); // read from main memory (we reset M[0] with the read)
+
+        if (name[0] == test[0] && name[1] == test[1] && name[2] == test[2] && name[3] == test[3]) {throw "Error: Duplicate name"; return;} // name exists 
     }
-    
+
+    int freeFD = -1;
+    for (int i =1; i < 7; i++) // 1-6 fd
+    {
+        unsigned char* currBlock = localChache[i];
+        for (int j = 0; j < 512; j += 16) // 0 - 511
+        {
+            fileDescriptors fd;
+            // Copy the 16 bytes from the buffer into the fileDescriptors struct
+            std::memcpy(&fd, &currBlock[j], 16); // copy 16 bytes (4 ints)
+            if (fd.fileSize != -1)
+            {
+                freeFD = ((i - 1) * 32) + (j / 16); // convert i and j into an index for later storage 
+
+                fileDescriptors newFD = {0,-1,-1,-1};
+                UpdateFD(newFD, freeFD); // update the freeFD with 0 
+                break;
+            }
+        }
+
+        if (freeFD != -1) {break;} // leave double for loop 
+    }
+
+    if (freeFD == -1) { throw "Error not space";} // direcotyr full 
+
+    memcpy(&test, &name, 4); // copy name onto test 
+    memcpy(&test[4], &freeFD, 4); // copy name onto test 
+
+    seek(0,0); // start at beginning of directory
+
+    while(OFT[0].current_position < OFT[0].file_size )
+    {
+        read(0,0,8); // read 8 bytes --> move curr_pos + 8 
+        
+        memcpy(&test, &M[0], 4); // read from main memory (we reset M[0] with the read)
+
+        if ('\0' == test[0] && '\0' == test[1] && '\0' == test[2] && '\0' == test[3]) 
+        {
+            memcpy(&M[OFT[0].current_position - 8], &test, 8); // move back 8 to make space for name + int
+            break;
+        }
+    }
+    if (OFT[0].current_position == 1536)
+    {
+        throw "Error: No free directory entry found";
+    }
+    std::cout << "created file" << std::endl;
+
 }
 
 int FileSystem::read(int i, int m, int n)
@@ -182,6 +267,8 @@ int FileSystem::read(int i, int m, int n)
         M[m] = OFT[i].buffer[bufferPosition]; // copy data
         
     }
+
+    
   
     return n;
 }
