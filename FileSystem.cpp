@@ -164,7 +164,7 @@ void FileSystem::create(unsigned char *name)
     while (OFT[0].current_position < OFT[0].file_size)
     {
         read(0,0,8); // read 8 bytes store into M --> move curr_pos + 8 
-        std::cout << "M: "<<M[0] << M[1] << M[2] << std::endl; 
+        std::cout << "M: "<< M[0] << M[1] << M[2] << std::endl; 
         std::cout << "name: "<< name[0] << name[1] << name[2] << std::endl;
 
         if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) {throw "Error: Duplicate name"; return;} // name exists 
@@ -203,7 +203,7 @@ void FileSystem::create(unsigned char *name)
     if (OFT[0].current_position == OFT[0].file_size) // dir is empty 
     {
         std::cout << "first call " << name << " to " << OFT[0].current_position << " using FD "<< freeFD << std::endl;
-        memcpy(&M[OFT[0].current_position], test, 8);
+        memcpy(&OFT[0].buffer[OFT[0].current_position], test, 8);
         OFT[0].file_size += 8;
         fileDescriptors newFD = {OFT[0].file_size,7,-1,-1};
         UpdateFD(newFD,0); // update fd 0 ( directory fd) 
@@ -213,10 +213,11 @@ void FileSystem::create(unsigned char *name)
         while(OFT[0].current_position < OFT[0].file_size)
         {
             read(0,0,8); // read 8 bytes --> move curr_pos + 8 
-            if ('\0' == M[0] && '\0' == M[1] && '\0' == M[2] && '\0' == M[3]) 
+            std::cout << "insert at " << OFT[0].current_position << " " << M[0] << M[1] << M[2] << std::endl; 
+            if ('\0' == M[0]) 
             {
-                // std::cout << name << " to " << OFT[0].current_position << " using FD "<< freeFD << std::endl;
-                memcpy(&M[OFT[0].current_position - 8], test, 8); // move back 8 to make space for name + int
+                std::cout << name << " to " << OFT[0].current_position << " using FD "<< freeFD << std::endl;
+                memcpy(&OFT[0].buffer[OFT[0].current_position - 8], test, 8); // move back 8 to make space for name + int
 
                 OFT[0].file_size += 8;
                 fileDescriptors newFD = {OFT[0].file_size,7,-1,-1};
@@ -227,7 +228,7 @@ void FileSystem::create(unsigned char *name)
 
     }
     
-    // std::cout << FS.M[0] << FS.M[1] << FS.M[2] << std::endl;
+    // std::cout << OFT[0].buffer[3] << OFT[0].buffer[4] <<OFT[0].buffer[5] << std::endl;
     if (OFT[0].current_position == 1536)
     {
         throw "Error: No free directory entry found";

@@ -10,7 +10,7 @@ int main()
     unsigned char name[4] =  {'Z', 'X', 'Y', '\0'};
     
     FS.create(test);
-    FS.create(test);
+    FS.create(name);
 
     // std::cout << FS.M[0] << FS.M[1] << FS.M[2] << std::endl;
 
