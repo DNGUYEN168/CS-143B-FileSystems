@@ -163,11 +163,11 @@ void FileSystem::create(unsigned char *name)
     // read to main memory starting at curr_pos 0 in directory 
     while (OFT[0].current_position < OFT[0].file_size)
     {
-        read(0,0,8); // read 8 bytes --> move curr_pos + 8 
-        
-        memcpy(&test, &M[0], 4); // read from main memory (we reset M[0] with the read)
+        read(0,0,8); // read 8 bytes store into M --> move curr_pos + 8 
+        std::cout << "M: "<<M[0] << M[1] << M[2] << std::endl; 
+        std::cout << "name: "<< name[0] << name[1] << name[2] << std::endl;
 
-        if (name[0] == test[0] && name[1] == test[1] && name[2] == test[2] && name[3] == test[3]) {throw "Error: Duplicate name"; return;} // name exists 
+        if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) {throw "Error: Duplicate name"; return;} // name exists 
     }
 
     int freeFD = -1;
@@ -179,8 +179,9 @@ void FileSystem::create(unsigned char *name)
             fileDescriptors fd;
             // Copy the 16 bytes from the buffer into the fileDescriptors struct
             std::memcpy(&fd, &currBlock[j], 16); // copy 16 bytes (4 ints)
-            if (fd.fileSize != -1)
+            if (fd.fileSize == -1) // free filedesc
             {
+                
                 freeFD = ((i - 1) * 32) + (j / 16); // convert i and j into an index for later storage 
 
                 fileDescriptors newFD = {0,-1,-1,-1};
@@ -194,28 +195,43 @@ void FileSystem::create(unsigned char *name)
 
     if (freeFD == -1) { throw "Error not space";} // direcotyr full 
 
-    memcpy(&test, &name, 4); // copy name onto test 
-    memcpy(&test[4], &freeFD, 4); // copy name onto test 
-
+    memcpy(test, name, 4); // copy name onto test 
+    memcpy(test+4, &freeFD, 4); 
+    
     seek(0,0); // start at beginning of directory
 
-    while(OFT[0].current_position < OFT[0].file_size )
+    if (OFT[0].current_position == OFT[0].file_size) // dir is empty 
     {
-        read(0,0,8); // read 8 bytes --> move curr_pos + 8 
-        
-        memcpy(&test, &M[0], 4); // read from main memory (we reset M[0] with the read)
-
-        if ('\0' == test[0] && '\0' == test[1] && '\0' == test[2] && '\0' == test[3]) 
-        {
-            memcpy(&M[OFT[0].current_position - 8], &test, 8); // move back 8 to make space for name + int
-            break;
-        }
+        std::cout << "first call " << name << " to " << OFT[0].current_position << " using FD "<< freeFD << std::endl;
+        memcpy(&M[OFT[0].current_position], test, 8);
+        OFT[0].file_size += 8;
+        fileDescriptors newFD = {OFT[0].file_size,7,-1,-1};
+        UpdateFD(newFD,0); // update fd 0 ( directory fd) 
     }
+    else 
+    {
+        while(OFT[0].current_position < OFT[0].file_size)
+        {
+            read(0,0,8); // read 8 bytes --> move curr_pos + 8 
+            if ('\0' == M[0] && '\0' == M[1] && '\0' == M[2] && '\0' == M[3]) 
+            {
+                // std::cout << name << " to " << OFT[0].current_position << " using FD "<< freeFD << std::endl;
+                memcpy(&M[OFT[0].current_position - 8], test, 8); // move back 8 to make space for name + int
+
+                OFT[0].file_size += 8;
+                fileDescriptors newFD = {OFT[0].file_size,7,-1,-1};
+                UpdateFD(newFD,0); // update fd 0 ( directory fd) 
+                break;
+            }
+        }
+
+    }
+    
+    // std::cout << FS.M[0] << FS.M[1] << FS.M[2] << std::endl;
     if (OFT[0].current_position == 1536)
     {
         throw "Error: No free directory entry found";
     }
-    std::cout << "created file" << std::endl;
 
 }
 
@@ -265,11 +281,8 @@ int FileSystem::read(int i, int m, int n)
         }
         
         M[m] = OFT[i].buffer[bufferPosition]; // copy data
-        
     }
 
-    
-  
     return n;
 }
 
