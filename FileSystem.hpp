@@ -47,7 +47,7 @@ class FileSystem
     void open();
     void close();
     int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
-    void write();
+    int write(int i, int m, int n); // copy n bytes from main memory M[m] to OFT[i]
     int seek(int i, int p);
     void directory();
 
@@ -61,6 +61,7 @@ class FileSystem
     // helpers 
     fileDescriptors getFileDescriptor(int i);
     void UpdateFD(fileDescriptors fd, int fdNum); // given fdIndex update with new info
+    int findFreeBlock();
 
 };
 
