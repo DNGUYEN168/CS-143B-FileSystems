@@ -143,12 +143,22 @@ void FileSystem::init()
     std::memset(M, 0, sizeof(M));
 }
 
-int FileSystem::write_memory(int m, unsigned char *s)
+int FileSystem::write_memory(int m, unsigned char *s, int bytes)
 {
-
-    memcpy(&M[m], s,sizeof(s));
-
-    return m + sizeof(s); // return new length
+    // M is always 512, which means m < 512 
+    int leftover_space = 512 - m; 
+    int copied_bytes;
+    if (sizeof(s) < leftover_space)
+    {
+        copied_bytes = bytes; // 
+    }
+    else
+    {
+        copied_bytes = leftover_space; // this is leftover 
+    }
+    memcpy(&M[m], s, copied_bytes);
+    
+    return copied_bytes;
 }
 
 std::string FileSystem::read_memory(int m, int n)
@@ -173,7 +183,7 @@ void FileSystem::create(unsigned char *name)
     {
         read(0,0,8); // read 8 bytes store into M --> move curr_pos + 8 
 
-        if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) {throw "Error: Duplicate name";} // name exists 
+        if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) {std::cout << "Error: Duplicate name" << std::endl; return;} // name exists 
     }
 
     int freeFD = -1;
@@ -199,14 +209,14 @@ void FileSystem::create(unsigned char *name)
         if (freeFD != -1) {break;} // leave double for loop 
     }
     
-    if (freeFD == -1) {throw "Error no space";} // direcotyr full 
+    if (freeFD == -1) {std::cout << "Error no space" << std::endl; return;} // direcotyr full 
 
     memcpy(test, name, 4); // copy name onto test 
     memcpy(test+4, &freeFD, 4); 
 
     seek(0,0); // start at beginning of directory
 
-    write_memory(0,test); // store name and int int main memory M
+    write_memory(0,test, sizeof(test)); // store name and int int main memory M
 
     while(OFT[0].current_position < OFT[0].file_size)
     {
@@ -221,7 +231,7 @@ void FileSystem::create(unsigned char *name)
 
      if (OFT[0].current_position == 1536)
     {
-        throw "Error: No space";
+        std::cout << "Error: No space" << std::endl; return;
     }
     if (OFT[0].current_position < OFT[0].file_size)
     {
@@ -231,22 +241,103 @@ void FileSystem::create(unsigned char *name)
 
 }
 
+int FileSystem::open(unsigned char* name)
+{
+
+    // find the file name 
+    seek(0,0); // go through OFT and find the given name 
+
+    int fdNum = -1;
+    while (OFT[0].current_position < OFT[0].file_size) //Search through the directory to see if the file exists
+    {    
+        read(0,0,8); // read 8 bytes store into M --> move curr_pos + 8 
+        if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) // name read from OFT.buffer mathces input 
+        {
+            unsigned char name[4];
+            memcpy(name, M, 4);
+            memcpy(&fdNum, &M[4], 4);
+            break;  
+        } 
+    }
+
+    if (fdNum == -1)
+    {
+        std::cout << "Error: no file found\n" << std::ends; return -1;
+    }
+
+    // now we have name and fd number 
+
+    for (int i = 1; i < 4; i++)  // check OFT table 1-3 b/c 0 is used for direcotry 
+    {
+        if (OFT[i].descriptor_index == fdNum)
+        {
+            std::cout << "Error: File already open" << std::endl; return -1;
+        }
+    }
+
+    int OpenOFT = -2;
+    for (int i = 1; i <4; i++)
+    {
+        if (OFT[i].descriptor_index == -1) // no fd present 
+        {
+            OpenOFT = i;
+            break; // FOUND 
+        }
+    }
+
+    if (OpenOFT == -2)
+    {
+        std::cout << "Error: no avaliable OFT" << std::endl; return -1;
+    }
+
+    fileDescriptors fd = getFileDescriptor(fdNum); // get fd of the file 
+
+    // fill OFT with info
+    OFT[OpenOFT].file_size = fd.fileSize;
+    OFT[OpenOFT].current_position = 0;
+    OFT[OpenOFT].descriptor_index = fdNum; 
+
+    if (OFT[OpenOFT].file_size == 0 && fd.b1 == -1) // file is empty no blocks allocated 
+    {
+        int freeBlock = findFreeBlock(); //get block from bitmap / update bitmap 
+
+        if (freeBlock == -1) 
+        { 
+            OFT[OpenOFT].file_size = -1;
+            OFT[OpenOFT].current_position = -1;
+            OFT[OpenOFT].descriptor_index = -1; 
+            std::cout << "Error: No blocks open" << std::endl; return -1;
+        }
+        fd.b1 = freeBlock;
+        UpdateFD(fd, fdNum); 
+        virtualDisk->read_block(freeBlock, OFT[OpenOFT].buffer); // grab block from disk 
+    }
+    else 
+    {
+        virtualDisk->read_block(fd.b1, OFT[OpenOFT].buffer); // block exists, just load from disk 
+    }
+    return OpenOFT;
+
+
+}
+
+
 int FileSystem::read(int i, int m, int n)
 {
     if (i < 0 || i > 3) // not inside OFT range
     {
-        throw "Error: Invalid OFT index";
+        std::cout << "Error: Invalid OFT index\n"; return -1;
     }
     if (OFT[i].file_size == -1)
     {
-        throw "Error: File not opened" ;
+        std::cout << "Error: File not opened\n" ; return -1;
     }
     if (n < 0 || n >= 512) // n = 0 - 511 
     {
-        throw "Error: Invalid byte size";
+        std::cout << "Error: Invalid byte size\n"; return -1;
     }
     if (m < 0 || m >= 512) {
-        throw "Error: Invalid memory index";
+        std::cout << "Error: Invalid memory index\n"; return -1;
     }
 
     int bufferPosition;
@@ -286,36 +377,39 @@ int FileSystem::write(int i, int m, int n)
 {
     if (i < 0 || i > 3) // not inside OFT range
     {
-        throw "Error: Invalid OFT index";
+        std::cout << "Error: Invalid OFT index\n"; return -1;
     }
     if (OFT[i].file_size == -1)
     {
-        throw "Error: File not opened" ;
+        std::cout << "Error: File not opened\n" ; return -1;
     }
-    if (n < 0 || n >= 512) // n = 0 - 511 
+    if (n < 0 || n > 512) // n = 0 - 511 
     {
-        throw "Error: Invalid byte size";
+        std::cout << "Error: Invalid byte size\n"; return -1;
     }
     if (m < 0 || m >= 512) {
-        throw "Error: Invalid memory index";    
+        std::cout << "Error: Invalid memory index\n"; return -1;
     }
     // whatever bytes from Main memory starting at m (M[m]) we write to the blocks i.e OFT[i].buffer 
 
     fileDescriptors fd = getFileDescriptor(OFT[i].descriptor_index); // get fd index
     int bufferPosition = OFT[i].current_position % 512; // get between 0-511
+    int freeBlock = -1;
     while (n > 0 && OFT[i].current_position < 1536)
     {
+        if (m >= 512) {break;} // reached end of memory buffer 
+
+
         if (OFT[i].current_position == 512) // block 1 full
         {
             if (fd.b2 == -1 ) // dont have block allocated yet 
             {
-                int freeBlock = findFreeBlock(); // get index of free block and update bitmap 
-                if (freeBlock == -1) {throw "Error: No space"; return -1;}
+                freeBlock = findFreeBlock(); // get index of free block and update bitmap 
+                if (freeBlock == -1) {std::cout << "Error: No space\n"; return -1;}
 
                 fd.b2 = freeBlock; // update with freeblock 
                 UpdateFD(fd, OFT[i].descriptor_index); // update fd on our cache
             }
-
             virtualDisk->write_block(fd.b1, OFT[i].buffer); // store old block
             
             virtualDisk->read_block(fd.b2, OFT[i].buffer); // get new block
@@ -326,17 +420,15 @@ int FileSystem::write(int i, int m, int n)
             if (fd.b3 == -1 ) // dont have block allocated yet 
             {
                 // udpateded 
-                int freeBlock = findFreeBlock(); // get index of free block and update bitmap 
-                if (freeBlock == -1) {throw "Error: No space"; return -1;}
+                freeBlock = findFreeBlock(); // get index of free block and update bitmap 
+                if (freeBlock == -1) {std::cout << "Error: No space\n"; return -1;}
 
-                fd.b2 = freeBlock; // update with freeblock 
+                fd.b3 = freeBlock; // update with freeblock 
                 UpdateFD(fd, OFT[i].descriptor_index); 
             }
-
             virtualDisk->write_block(fd.b2, OFT[i].buffer); // store old block
-            
-            virtualDisk->read_block(fd.b3, OFT[i].buffer); // get new block
 
+            virtualDisk->read_block(fd.b3, OFT[i].buffer); // get new block
         }
         OFT[i].buffer[bufferPosition] = M[m];  // write to buffer 
         m++;                                
@@ -347,7 +439,10 @@ int FileSystem::write(int i, int m, int n)
 
     if (OFT[i].current_position > OFT[i].file_size)
     {
-        OFT[i].file_size = OFT[i].current_position; //Update it in the OFT first
+        OFT[i].file_size = OFT[i].current_position; //update oft
+        fd.fileSize = OFT[i].current_position; 
+        UpdateFD(fd,OFT[i].descriptor_index);
+
     }
     return n;
 
@@ -359,15 +454,15 @@ int FileSystem::seek(int i, int p)
     // p = new pos we want to move at 
     if (i < 0 || i > 3) // not in range of OFT
     {
-        throw "Error: Invalid OFT index";
+        std::cout << "Error: Invalid OFT index\n"; return -1;
     }
     if (OFT[i].file_size == -1)
     {
-        throw "Error: File at index not opened";
+        std::cout << "Error: File at index not opened\n"; return -1;
     }
     if (p < 0 || p > OFT[i].file_size) // desired position is negative, or bigger than current file 
     {
-        throw  "error: current position is past the end of file";
+        std::cout <<  "error: current position is past the end of file\n"; return -1;
     }
 
     // main seek 
@@ -416,6 +511,10 @@ void FileSystem::directory()
         memcpy(&fdNum, &M[4], 4);
 
         fileDescriptors fd = getFileDescriptor(fdNum);
-        std::cout << name << " " << fd.fileSize << std::endl;
+        std::cout << name << " " << fdNum << " " << std::ends;
+        std::cout << "{" << fd.fileSize << ", ";
+        std::cout <<  fd.b1 << ", ";
+        std::cout <<  fd.b2 << ", ";
+        std::cout <<  fd.b3 << "}" << std::endl;
     }
 }

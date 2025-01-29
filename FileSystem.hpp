@@ -44,7 +44,7 @@ class FileSystem
 
     void create(unsigned char* name);
     void destroy();
-    void open();
+    int open(unsigned char* name);
     void close();
     int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
     int write(int i, int m, int n); // copy n bytes from main memory M[m] to OFT[i]
@@ -55,7 +55,7 @@ class FileSystem
 
     // auxiliory function 
     void init();
-    int write_memory(int m, unsigned char* s);
+    int write_memory(int m, unsigned char* s, int bytes);
     std::string read_memory(int m, int n);
 
     // helpers 

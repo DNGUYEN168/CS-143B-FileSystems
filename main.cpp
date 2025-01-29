@@ -14,11 +14,29 @@ int main()
     FS.create(name);
     // std::cout << "calll!" << std::endl;
     FS.create(name1);
-    // std::cout << "calll!" << std::endl;
+    // // std::cout << "calll!" << std::endl;
     FS.create(name2);
-    // std::cout << "calll!" << std::endl;
+    // // std::cout << "calll!" << std::endl;
     FS.create(name3);
-    
+
+    FS.open(name);
+    FS.open(name1);
+    FS.open(name2);
+
+    // unsigned char tIn[12] = {'a','b','c','d','e','f','g','h','i','j','k','l'};
+    // FS.write_memory(0,tIn, sizeof(tIn));
+    std::cout << "write call here" << std::endl;
+    FS.write(1, 0,512); // 8
+    FS.write(2, 0,512); // 9
+    FS.write(3, 0,512); // 10
+
+    FS.write(1, 0,512); // 11
+    FS.write(1, 0,512); // 12
+    FS.write(3, 0,512); // 13
+    FS.write(2, 0,512); // 14
+    FS.write(2, 0,512); // 15
+    FS.write(3, 0,512); // 16
+
 
     FS.directory();
 
