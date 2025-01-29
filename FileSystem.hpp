@@ -43,15 +43,13 @@ class FileSystem
 
 
     void create(unsigned char* name);
-    void destroy();
+    unsigned char* destroy(unsigned char* name);
     int open(unsigned char* name);
-    void close();
+    int close(int i);
     int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
     int write(int i, int m, int n); // copy n bytes from main memory M[m] to OFT[i]
     int seek(int i, int p);
     void directory();
-
-    void quit(); // end program
 
     // auxiliory function 
     void init();

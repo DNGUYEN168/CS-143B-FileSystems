@@ -31,17 +31,29 @@ int main()
     FS.write(3, 0,512); // 10
 
     FS.write(1, 0,512); // 11
-    FS.write(1, 0,512); // 12
     FS.write(3, 0,512); // 13
     FS.write(2, 0,512); // 14
     FS.write(2, 0,512); // 15
     FS.write(3, 0,512); // 16
 
+    // FS.close(1);
+
+    // FS.write(1, 0,512); // 11
+    // FS.seek(1,0)
+    // FS.read(1,0,100);
 
     FS.directory();
 
+    FS.destroy(name);
+    FS.destroy(name2);
+    
     // std::cout << FS.M[0] << FS.M[1] << FS.M[2] << std::endl;
+    FS.directory();
 
+    std::cout << "new dir\n"; 
+    FS.create(name2);
+    FS.create(name);
+    FS.directory();
     
 
     return 0;

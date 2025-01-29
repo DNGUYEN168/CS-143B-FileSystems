@@ -22,6 +22,7 @@ fileDescriptors FileSystem::getFileDescriptor(int i)
     return fdData;
 }
 
+
 void FileSystem::UpdateFD(fileDescriptors fd, int fdNum)
 {
     // get fd info if we need to get more blocks later on 
@@ -224,7 +225,6 @@ void FileSystem::create(unsigned char *name)
 
         if ('\0' == M[9]) 
         {
-            std::cout << "3 found an empty" << std::endl;
             break; // once we hit a blank spot , we have to move back 8 to get to the front of it 
         }
     }
@@ -238,6 +238,79 @@ void FileSystem::create(unsigned char *name)
         seek(0, OFT[0].current_position - 8);
     }
     write(0, 0, 8); 
+
+}
+
+unsigned char* FileSystem::destroy(unsigned char* name)
+{
+    seek(0,0); // go through OFT and find the given name 
+
+    int fdNum = -1;
+    while (OFT[0].current_position < OFT[0].file_size) //Search through the directory to see if the file exists
+    {    
+        read(0,0,8); // read 8 bytes store into M --> move curr_pos + 8 
+        if (name[0] == M[0] && name[1] == M[1] && name[2] == M[2] && name[3] == M[3]) // name read from OFT.buffer mathces input 
+        {
+            
+            memcpy(&fdNum, &M[4], 4);
+            fileDescriptors fd = getFileDescriptor(fdNum);
+            
+            // check if its opened 
+            for (int i =1; i < 4; i++)
+            {
+                
+                if (OFT[i].descriptor_index == fdNum) // file is currently opened
+                {
+                    
+                    close(i); // close that fd
+                }
+            }
+            int BlocktoByte;
+            int BlocktoBit;
+        
+            if (fd.b1 != -1)
+            {
+                BlocktoByte = fd.b1 / 8; // get the byte
+                BlocktoBit = fd.b1 % 8; // get the bit
+                localChache[0][BlocktoByte] &= ~(1 << BlocktoBit);
+            }
+            if (fd.b2 != -1)
+            {
+                BlocktoByte = fd.b2 / 8; // get the byte
+                BlocktoBit = fd.b2 % 8; // get the bit
+                localChache[0][BlocktoByte] &= ~(1 << BlocktoBit);
+            }
+            if (fd.b3 != -1)
+            {
+                BlocktoByte = fd.b3 / 8; // get the byte
+                BlocktoBit = fd.b3 % 8; // get the bit
+                localChache[0][BlocktoByte] &= ~(1 << BlocktoBit);
+            }
+            
+            // clear fd
+            fd.b1 = -1;
+            fd.b2 = -1;
+            fd.b3 = -1;
+            UpdateFD(fd,fdNum); // update the fd
+
+            unsigned char empty[8] = {'\0','\0','\0','\0','\0','\0','\0','\0'};
+            seek(0, OFT[0].current_position - 8);
+            write_memory(0,empty, sizeof(empty)); // store name and int int main memory M
+            write(0,0,8);
+
+            fileDescriptors newFd = {-1,-1,-1,-1};
+            UpdateFD(newFd,fdNum);
+            
+            break; 
+        } 
+    }
+
+    if (fdNum == -1)
+    {
+        std::cout << "Error: no file found\n" << std::ends; return nullptr;
+    }
+
+    return name;
 
 }
 
@@ -318,9 +391,36 @@ int FileSystem::open(unsigned char* name)
     }
     return OpenOFT;
 
-
 }
 
+int FileSystem::close(int i) // closing OFT[i]
+{
+    if (i <0 || i > 3) { std::cout << "Error: invalid index\n"; return -1;}
+
+    if (i == 0) { std::cout << "Error: can't close directory\n"; return -1; } // cant delete dir UNLESS we quit 
+
+    fileDescriptors fd = getFileDescriptor(OFT[i].descriptor_index);
+    if (OFT[i].current_position <= 512)
+    {
+        virtualDisk->write_block(fd.b1, OFT[i].buffer); // store b1
+    }
+    else if (OFT[i].current_position <= 1024)
+    {
+        virtualDisk->write_block(fd.b2, OFT[i].buffer); // store b2
+    }
+    else
+    {
+        virtualDisk->write_block(fd.b3, OFT[i].buffer); // store b3
+    }
+
+    // empty OFT[i]
+    OFT[i].current_position = -1;
+    OFT[i].descriptor_index = -1;
+    OFT[i].file_size = -1;
+
+    return i;
+
+}
 
 int FileSystem::read(int i, int m, int n)
 {
@@ -332,14 +432,13 @@ int FileSystem::read(int i, int m, int n)
     {
         std::cout << "Error: File not opened\n" ; return -1;
     }
-    if (n < 0 || n >= 512) // n = 0 - 511 
+    if (n < 0 || n > 512) // n = 0 - 511 
     {
         std::cout << "Error: Invalid byte size\n"; return -1;
     }
     if (m < 0 || m >= 512) {
         std::cout << "Error: Invalid memory index\n"; return -1;
     }
-
     int bufferPosition;
     // assume 0 - 1535, the buffer inside OFT[i] will be some block, we mod to get the starting point at THAT block     
     fileDescriptors fdData = getFileDescriptor(OFT[i].descriptor_index); // get file descriptor and store for ease of use 
@@ -347,8 +446,11 @@ int FileSystem::read(int i, int m, int n)
     for (n; n > 0; n--, m++, OFT[i].current_position++) // decr n (num bytes), inc m (memory position) , inc oft.curr
     {
         bufferPosition = OFT[i].current_position % 512; // make sure it stays wiwhtin 0 - 511
+
+        if (i == 1) {std::cout << OFT[i].current_position << " " << OFT[i].file_size << std::endl;}
+
         if (m >= 512) {break;} // not enough room in main memory 
-        if (OFT[i].current_position > OFT[i].file_size) {break;} // file has no more data (excluding dir)
+        if (OFT[i].current_position > OFT[i].file_size) {break;} 
         
         if (OFT[i].current_position == 512) // b1 (0-511) move to b2 if curr_pos goes past 
         {
@@ -356,6 +458,7 @@ int FileSystem::read(int i, int m, int n)
             virtualDisk->write_block(fdData.b1, OFT[i].buffer);
 
             // get block 2 for more reading 
+            if (fdData.b2 == -1) { break;}
             virtualDisk->read_block(fdData.b2, OFT[i].buffer);
         }
         else if (OFT[i].current_position == 1024) // blocks 2 (512 - 1023) move to block 3 if curr_pos goes past b2
@@ -363,6 +466,7 @@ int FileSystem::read(int i, int m, int n)
             //move block 2 back to disk
             virtualDisk->write_block(fdData.b2, OFT[i].buffer);
 
+            if (fdData.b3 == -1) { break;}
             // get block3 for more reading 
             virtualDisk->read_block(fdData.b3, OFT[i].buffer);
         }
@@ -509,12 +613,16 @@ void FileSystem::directory()
         unsigned char name[4];
         memcpy(name, M, 4);
         memcpy(&fdNum, &M[4], 4);
+        if (name[0] != '\0')
+        {
+            fileDescriptors fd = getFileDescriptor(fdNum);
+            std::cout << name << " " << fdNum << " " << std::ends;
+            std::cout << "{" << fd.fileSize << ", ";
+            std::cout <<  fd.b1 << ", ";
+            std::cout <<  fd.b2 << ", ";
+            std::cout <<  fd.b3 << "}" << std::endl;
 
-        fileDescriptors fd = getFileDescriptor(fdNum);
-        std::cout << name << " " << fdNum << " " << std::ends;
-        std::cout << "{" << fd.fileSize << ", ";
-        std::cout <<  fd.b1 << ", ";
-        std::cout <<  fd.b2 << ", ";
-        std::cout <<  fd.b3 << "}" << std::endl;
+        }
+        
     }
 }
