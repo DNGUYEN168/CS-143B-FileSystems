@@ -1,6 +1,6 @@
 #include "Disk.hpp"
 #include <string.h>
-
+#include <iostream>
 Disk::Disk()
 {
     // initialie the 64x512 array 
@@ -10,6 +10,18 @@ Disk::Disk()
     {
         disk[i] = new unsigned char[512];
     }
+}
+
+void Disk::clearDisk()
+{
+    for (int x = 0; x < 64; x++)
+    {
+        delete[] disk[x]; // Free the memory pointed to by each pointer in localChache
+        disk[x] = nullptr; // Optional: set the pointer to nullptr for safety
+    }
+    // Step 2: Deallocate the array of pointers itself
+    delete[] disk; // Free the array of pointers
+    disk = nullptr;
 }
 
 void Disk::read_block(int B, unsigned char* input_buffer)

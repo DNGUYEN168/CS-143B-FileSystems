@@ -1,3 +1,28 @@
 in
 cr foo
-op bee
+cr bar
+op foo
+cr dee
+op bar
+op Dat
+dr
+sk 1 10
+cl 1
+de foo
+cr Dat
+cl 2
+op Dat
+dr
+
+dr
+wm 0 abcdefghij
+cr foo
+op foo
+wr 1 0 5
+wr 1 5 2
+dr
+sk 1 5
+rd 1 10 3
+rm 0 20
+cl 1
+dr

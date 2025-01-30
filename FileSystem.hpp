@@ -33,7 +33,6 @@ class FileSystem
     
     public:
     FileSystem();
-    ~FileSystem();
     unsigned char M[512]; // main memory ( can be used to help set up the fds)
 
     unsigned char* create(unsigned char* name);
@@ -43,6 +42,7 @@ class FileSystem
     int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
     int write(int i, int m, int n); // copy n bytes from main memory M[m] to OFT[i]
     int seek(int i, int p);
+    void quit();
     std::string directory();
 
     // auxiliory function 

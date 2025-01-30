@@ -9,7 +9,7 @@ private:
 public:
 
     Disk(); // initializser for disk 
-
+    void clearDisk();
     void read_block(int B, unsigned char* input_buffer); // copies block disk[B] into input_buffer 
     void write_block(int B, unsigned char* output_buffer); // copies output_buffer to disk[B] 
    

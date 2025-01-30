@@ -71,12 +71,18 @@ FileSystem::FileSystem()
     init(); // call to init to start, will be called mutliple in shell 
 }
 
-FileSystem::~FileSystem()
+void FileSystem::quit()
 {
-    // loop through everything and clear all data 
-    
+    for (int x = 0; x < 7; x++)
+    {
+        delete[] localChache[0]; // Free the memory pointed to by each pointer in localChache
+        localChache[x] = nullptr; 
+    }
 
-
+    // // Step 2: Deallocate the array of pointers 
+    delete[] localChache; // Free the array of pointers
+    localChache = nullptr;
+    virtualDisk->clearDisk();
 }
 
 void FileSystem::init()
