@@ -28,19 +28,13 @@ class FileSystem
     Disk* virtualDisk; // disk that will hold all file information 
 
     oft_entry OFT[4]; // open file table 
-
-    unsigned char* I[512]; // input_buffer
-    unsigned char* O[512]; // output_buffer
-
-
-    // using a psuedo cache to save fds later 
+    unsigned char M[512]; // main memory ( can be used to help set up the fds)
     unsigned char** localChache;
-
-
+    // using a psuedo cache to save fds later 
+    
     public:
     FileSystem();
-    unsigned char M[512]; // main memory ( can be used to help set up the fds)
-
+    ~FileSystem();
 
     void create(unsigned char* name);
     unsigned char* destroy(unsigned char* name);

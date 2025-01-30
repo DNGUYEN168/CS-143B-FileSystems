@@ -1,60 +1,25 @@
 #include <stdio.h>
 #include <iostream>
 #include "FileSystem.hpp"
-
+#include "Helpers.hpp"
 int main()
 {
     // Disk* teast= new Disk();
     FileSystem FS = FileSystem();
-    unsigned char name[4] = {'W', 'X', 'Y', '\0'};
-    unsigned char name1[4] = {'P', 'Z', 'W', '\0'};
-    unsigned char name2[4] = {'X', 'X', 'Y', '\0'};
-    unsigned char name3[4] = {'F', 'K', 'W', '\0'};
-
-    FS.create(name);
-    // std::cout << "calll!" << std::endl;
-    FS.create(name1);
-    // // std::cout << "calll!" << std::endl;
-    FS.create(name2);
-    // // std::cout << "calll!" << std::endl;
-    FS.create(name3);
-
-    FS.open(name);
-    FS.open(name1);
-    FS.open(name2);
-
-    // unsigned char tIn[12] = {'a','b','c','d','e','f','g','h','i','j','k','l'};
-    // FS.write_memory(0,tIn, sizeof(tIn));
-    std::cout << "write call here" << std::endl;
-    FS.write(1, 0,512); // 8
-    FS.write(2, 0,512); // 9
-    FS.write(3, 0,512); // 10
-
-    FS.write(1, 0,512); // 11
-    FS.write(3, 0,512); // 13
-    FS.write(2, 0,512); // 14
-    FS.write(2, 0,512); // 15
-    FS.write(3, 0,512); // 16
-
-    // FS.close(1);
-
-    // FS.write(1, 0,512); // 11
-    // FS.seek(1,0)
-    // FS.read(1,0,100);
+    unsigned char name[4] = {'\0','\0','\0','\0'};
+    int num = 2;
+    int num1 = 31;
+    for (int i = 0; i < num; i++)
+    {
+        for (int j = 0; j < num1; j++)
+        {
+            name[0] = 'A' + i;  // Convert `i` into a printable character
+            name[1] = 'B' + j;  // Convert `j` into a printable character
+            name[2] = 'C' + i;
+            FS.create(name);
+        }
+    }
 
     FS.directory();
-
-    FS.destroy(name);
-    FS.destroy(name2);
-    
-    // std::cout << FS.M[0] << FS.M[1] << FS.M[2] << std::endl;
-    FS.directory();
-
-    std::cout << "new dir\n"; 
-    FS.create(name2);
-    FS.create(name);
-    FS.directory();
-    
-
     return 0;
 }
