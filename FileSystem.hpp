@@ -28,22 +28,22 @@ class FileSystem
     Disk* virtualDisk; // disk that will hold all file information 
 
     oft_entry OFT[4]; // open file table 
-    unsigned char M[512]; // main memory ( can be used to help set up the fds)
     unsigned char** localChache;
     // using a psuedo cache to save fds later 
     
     public:
     FileSystem();
     ~FileSystem();
+    unsigned char M[512]; // main memory ( can be used to help set up the fds)
 
-    void create(unsigned char* name);
+    unsigned char* create(unsigned char* name);
     unsigned char* destroy(unsigned char* name);
     int open(unsigned char* name);
     int close(int i);
     int read(int i, int m, int n); // get OFT[i], read n bytes from its buffer (moving to next blocks if neccessary), into M starting at m
     int write(int i, int m, int n); // copy n bytes from main memory M[m] to OFT[i]
     int seek(int i, int p);
-    void directory();
+    std::string directory();
 
     // auxiliory function 
     void init();
